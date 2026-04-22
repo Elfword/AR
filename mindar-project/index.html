@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.4/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; overflow: hidden; }
+      .a-canvas { width: 100% !important; height: 100% !important; }
+  </style>
+
+</head>
+
+<body style="margin: 0; overflow: hidden;">
+  <a-scene
+    mindar-image="imageTargetSrc: targets.mind;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    renderer="colorManagement: true; physicallyCorrectLights: true"
+    embedded>
+
+    <a-assets>
+      <img id="my-image" src="marker.png">
+      <video id="my-video" src="video.mp4" loop playsinline crossorigin="anonymous"></video>
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <a-entity mindar-image-target="targetIndex: 0">
+
+      <!-- 1. GAMBAR — background di belakang semua -->
+      <a-image
+        src="#my-image"
+        position="0 0 0"
+        width="1" height="0.6">
+      </a-image>
+
+      <!-- 2. VIDEO — di atas gambar (z: 0.01) -->
+      <a-video
+        src="#my-video"
+        position="0 0.5 0.01"
+        width="1" height="0.6"
+        visible="false"
+        id="ar-video">
+      </a-video>
+
+      <!-- 3. OBJEK 3D — melayang di atas marker -->
+      <a-box
+        position="0 0.8 0"
+        width="0.3" height="0.3" depth="0.3"
+        color="#FF6B6B"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 2000">
+      </a-box>
+
+      <!-- 4. TEKS -->
+      <a-text
+        value="Hello AR!"
+        position="0 -0.5 0.01"
+        align="center"
+        color="#FFFFFF"
+        width="2">
+      </a-text>
+
+    </a-entity>
+
+  </a-scene>
+
+  <script>
+    // Jalankan video otomatis saat marker terdeteksi
+    const target = document.querySelector('[mindar-image-target]');
+    const video = document.querySelector('#my-video');
+    const arVideo = document.querySelector('#ar-video');
+
+    target.addEventListener('targetFound', () => {
+      video.play();
+      arVideo.setAttribute('visible', true);
+    });
+
+    target.addEventListener('targetLost', () => {
+      video.pause();
+      arVideo.setAttribute('visible', false);
+    });
+
+    let lostTimeout;
+
+    target.addEventListener('targetFound', () => {
+      clearTimeout(lostTimeout);
+      video.play().catch(e => console.error(e));
+      arVideo.setAttribute('visible', true);
+    });
+
+    target.addEventListener('targetLost', () => {
+      // Wait 1 second before hiding, in case tracking recovers
+      lostTimeout = setTimeout(() => {
+        video.pause();
+        arVideo.setAttribute('visible', false);
+      }, 1000);
+    });
+    
+    let initialDistance = null;
+let initialScale = 1;
+
+document.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2) {
+    initialDistance = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    initialScale = parseFloat(plane.getAttribute('scale')?.x || 1);
+  }
+});
+
+document.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2) {
+    const dist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    const scale = initialScale * (dist / initialDistance);
+    plane.setAttribute('scale', `${scale} ${scale} 1`);
+  }
+});
+  </script>
+</body>
+</html>
